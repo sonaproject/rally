@@ -2,7 +2,7 @@ FROM ubuntu:18.04
 
 RUN sed -i s/^deb-src.*// /etc/apt/sources.list
 
-RUN apt-get update && apt-get install --yes sudo python3-dev python3-pip vim git-core && \
+RUN apt-get update && apt-get install --yes sudo python3-dev python3-pip vim git-core iptables net-tools iputils-ping && \
     apt clean && \
     pip3 install --upgrade pip && \
     useradd -u 65500 -m rally && \
@@ -14,7 +14,8 @@ COPY ./ /rally/source
 WORKDIR /rally/source
 
 RUN pip3 install . --constraint upper-constraints.txt --no-cache-dir && \
-    pip3 install pymysql psycopg2-binary --no-cache-dir && \
+    pip3 install pymysql psycopg2-binary rally-openstack --no-cache-dir && \
+    pip3 install -U setuptools --no-cache-dir && \
     mkdir -p /etc/rally && \
     echo "[database]" > /etc/rally/rally.conf && \
     echo "connection=sqlite:////home/rally/.rally/rally.db" >> /etc/rally/rally.conf
@@ -22,12 +23,14 @@ RUN pip3 install . --constraint upper-constraints.txt --no-cache-dir && \
 COPY ./etc/motd_for_docker /etc/motd
 RUN echo '[ ! -z "$TERM" -a -r /etc/motd ] && cat /etc/motd' >> /etc/bash.bashrc
 
-USER rally
+USER root
 ENV HOME /home/rally
+WORKDIR /home/rally
 RUN mkdir -p /home/rally/.rally && rally db recreate
+CMD ["bash", "--login"]
 
 # Docker volumes have specific behavior that allows this construction to work.
 # Data generated during the image creation is copied to volume only when it's
 # attached for the first time (volume initialization)
-VOLUME ["/home/rally/.rally"]
-ENTRYPOINT ["rally"]
+#VOLUME ["/home/rally/.rally"]
+#ENTRYPOINT ["rally"]
